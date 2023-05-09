@@ -1,0 +1,29 @@
+{
+  "canisters": {
+    "diary_backend": {
+      "main": "src/diary_backend/main.mo",
+      "type": "motoko"
+    },
+    "diary_frontend": {
+      "dependencies": [
+        "diary_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/diary_frontend/src/index.html"
+      },
+      "source": [
+        "src/diary_frontend/assets",
+        "dist/diary_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
