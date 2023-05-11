@@ -13,26 +13,25 @@ actor {
     completed : Bool;
   };
 
-  var homeworkDiary = Buffer.Buffer<Homework>(1);
+  var homeworkDiary = Buffer.Buffer<Homework>(0);
 
   public func addHomework(homework : Homework) : async Nat {
     homeworkDiary.add(homework);
     let id = homeworkDiary.size();
-    return id;
+    return (id -1);
   };
 
   public shared query func getHomework(id : Nat) : async Result.Result<Homework, Text> {
-    if (id <= homeworkDiary.size()) {
-      let homework = homeworkDiary.get(id - 1);
+    if (id < homeworkDiary.size() and id >= 0) {
+      let homework = homeworkDiary.get(id);
       return #ok(homework);
     } else {
       return #err("Invalid homework ID");
     };
-
   };
 
   public shared func updateHomework(id : Nat, homework : Homework) : async Result.Result<(), Text> {
-    if (id >= homeworkDiary.size()) {
+    if (id >= homeworkDiary.size() and id < 0) {
       return #err "Homework doesn't exist";
     };
     switch (?homeworkDiary.put(id, homework)) {
@@ -42,7 +41,7 @@ actor {
   };
 
   public shared func markAsCompleted(id : Nat) : async Result.Result<(), Text> {
-    if (id >= homeworkDiary.size()) {
+    if (id >= homeworkDiary.size() and id < 0) {
       return #err "Homework doesn't exist";
     };
     switch (?homeworkDiary.get(id)) {
@@ -60,12 +59,12 @@ actor {
     };
   };
 
-  public shared func deleteHomework(homeworkId : Nat) : async Result.Result<(), Text> {
-    if (homeworkId >= homeworkDiary.size()) {
+  public shared func deleteHomework(id : Nat) : async Result.Result<(), Text> {
+    if (id >= homeworkDiary.size() and id < 0) {
       return #err "Invalid homework ID";
     };
 
-    switch (?homeworkDiary.remove(homeworkId)) {
+    switch (?homeworkDiary.remove(id)) {
       case null { return #err "Invalid homework ID" };
       case (?Homework) { return #ok(()) };
     };
@@ -75,52 +74,20 @@ actor {
     return Buffer.toArray(homeworkDiary);
   };
 
+  public shared func getPendingHomework() : async [Homework] {
+    let pendingHomework = Buffer.clone(homeworkDiary);
+
+    pendingHomework.filterEntries(func(_, x) = (x.completed == false));
+
+    return Buffer.toArray(pendingHomework);
+  };
+
   public shared func searchHomework(searchTerm : Text) : async [Homework] {
-    let matchingHomework : Buffer.Buffer<Homework>(1);
-    for (homework in homeworkDiary.vals()) {
-      if (Text.contains(homework.title, searchTerm) or Text.contains(homework.description, searchTerm)) {
-        matchingHomework.add(homework);
-      };
-    };
+    let matchingHomework = Buffer.clone(homeworkDiary);
+
+    matchingHomework.filterEntries(func(_, x) = (Text.contains(x.title, #text searchTerm) or Text.contains(x.description, #text searchTerm)));
+
     return Buffer.toArray(matchingHomework);
   };
 
 };
-
-//  public shared func getPendingHomework() : async [Homework] {
-//     var pendingHomework : [Homework] = [];
-//     let allHomework = await getAllHomework();
-
-//     for (homework in allHomework.vals()) {
-//       if (not homework.completed) {
-//         pendingHomework := Array.append(pendingHomework, homework);
-//       };
-//     };
-
-//     return pendingHomework;
-//   };
-
-// public shared query func getPendingHomework() : async [Homework] {
-//     var pendingHomework : [Homework] = [];
-//     for (i in Iter.range(0, homeworkDiary.size())) {
-//       let homework = homeworkDiary.get(i);
-//       if (?homework.completed) {
-//         pendingHomework.add(homework);
-//       };
-//     };
-//     return pendingHomework;
-//   };
-
-// public shared func getAllHomework() : async [Homework] {
-//   return homeworkDiary.toSeq();
-// };
-
-// public shared func getPendingHomework() : async [Homework] {
-//   return homeworkDiary.toSeq().filter((homework) = >! homework.completed);
-// };
-
-// public shared func searchHomework(searchTerm : Text) : async [Homework] {
-//   return homeworkDiary.toSeq().filter(
-//     (homework) => homework.title.contains(searchTerm) | | homework.description.contains(searchTerm)
-//   );
-// };
