@@ -1,36 +1,72 @@
-import Blob "mo:base/Blob";
-import Array "mo:base/Array";
-import Option "mo:base/Option";
-import Nat8 "mo:base/Nat8";
-import Principal "mo:base/Principal";
+import Account "account";
+import TrieMap "mo:base/TrieMap";
+import Nat "mo:base/Nat";
 import Text "mo:base/Text";
-import Nat32 "mo:base/Nat32";
+import Result "mo:base/Result";
+import Principal "mo:base/Principal";
 
-module {
+actor MotoCoin {
 
-    public type Subaccount = Blob;
-    public type Account = {
-        owner : Principal;
-        subaccount : ?Subaccount;
+  public type Subaccount = Blob;
+  public type Account = Account.Account;
+
+  var ledger = TrieMap.TrieMap<Account, Nat>(Account.accountsEqual, Account.accountsHash);
+
+  public shared query func name() : async Text {
+    "MotoCoin";
+  };
+
+  public shared query func symbol() : async Text {
+    "MOC";
+  };
+
+  public shared query func totalSupply() : async Nat {
+    var supply : Nat = 500000000;
+    return supply;
+  };
+
+  public query func balanceOf(who : Account) : async Nat {
+    let balance : Nat = switch (ledger.get(who)) {
+      case null 0;
+      case (?result) result;
+    };
+    return balance;
+  };
+
+  public shared (msg) func transfer(from : Account, to : Account, amount : Nat) : async Result.Result<(), Text> {
+    let fromBalance = await balanceOf(from);
+
+    if (fromBalance >= amount) {
+      let newFromBalance : Nat = fromBalance - amount;
+      ledger.put(from, newFromBalance);
+      let toBalance = await balanceOf(to);
+      let newToBalance = toBalance + amount;
+      ledger.put(to, newToBalance);
+      return #ok();
+    } else {
+      return #err "Insufficient funds";
+    };
+  };
+
+  public shared func airdrop() : async Result.Result<(), Text> {
+    let studentsPrincipals : [Principal] = await getAllStudentsPrincipal();
+
+    for (principal in studentsPrincipals) {
+      let mainAccount : Account = {
+        owner = principal;
+        subaccount = null;
+      };
+
+      let currentBalance = await balanceOf(mainAccount);
+      let newBalance = currentBalance + 100;
+      ledger.put(mainAccount, newBalance);
     };
 
-    func _getDefaultSubaccount() : Subaccount {
-        Blob.fromArrayMut(Array.init(32, 0 : Nat8));
-    };
+    #ok(());
+  };
 
-    public func accountsEqual(lhs : Account, rhs : Account) : Bool {
-        let lhsSubaccount : Subaccount = Option.get<Subaccount>(lhs.subaccount, _getDefaultSubaccount());
-        let rhsSubaccount : Subaccount = Option.get<Subaccount>(rhs.subaccount, _getDefaultSubaccount());
-        Principal.equal(lhs.owner, rhs.owner) and Blob.equal(lhsSubaccount,rhsSubaccount);
-    };
-
-    public func accountsHash(lhs : Account) : Nat32 {
-        let lhsSubaccount : Subaccount = Option.get<Subaccount>(lhs.subaccount, _getDefaultSubaccount());
-       Text.hash(Nat32.toText(Principal.hash(lhs.owner)) # Nat32.toText(Blob.hash(lhsSubaccount)));
-    };
-
-    public func accountBelongToPrincipal(account : Account, principal : Principal) : Bool {
-        Principal.equal(account.owner, principal);
-    };
+  public shared func getAllStudentsPrincipal() : async [Principal] {
+    [Principal.fromText("dummyPrincipal1"), Principal.fromText("dummyPrincipal2")];
+  };
 
 };
