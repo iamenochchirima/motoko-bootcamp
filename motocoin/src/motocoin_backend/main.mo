@@ -52,21 +52,15 @@ actor MotoCoin {
     let studentsPrincipals : [Principal] = await getAllStudentsPrincipal();
 
     for (principal in studentsPrincipals) {
-      let mainAccount : Account = {
-        owner = principal;
-        subaccount = null;
-      };
-
       let currentBalance = await balanceOf(mainAccount);
       let newBalance = currentBalance + 100;
       ledger.put(mainAccount, newBalance);
     };
-
     #ok(());
   };
 
   public shared func getAllStudentsPrincipal() : async [Principal] {
-    [Principal.fromText("dummyPrincipal1"), Principal.fromText("dummyPrincipal2")];
+    #
   };
 
 };
