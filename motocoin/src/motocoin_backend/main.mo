@@ -4,6 +4,7 @@ import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 import Result "mo:base/Result";
 import Principal "mo:base/Principal";
+import Option "mo:base/Option";
 
 actor MotoCoin {
 
@@ -21,7 +22,10 @@ actor MotoCoin {
   };
 
   public shared query func totalSupply() : async Nat {
-    var supply : Nat = 500000000;
+    var supply : Nat = 0;
+    for ((key, value) in ledger.entries()) {
+      supply += 1;
+    };
     return supply;
   };
 
@@ -48,19 +52,30 @@ actor MotoCoin {
     };
   };
 
+  let studentsCall : actor {
+    getAllStudentsPrincipal : shared () -> async [Principal];
+  } = actor ("rww3b-zqaaa-aaaam-abioa-cai");
+
   public shared func airdrop() : async Result.Result<(), Text> {
-    let studentsPrincipals : [Principal] = await getAllStudentsPrincipal();
 
-    for (principal in studentsPrincipals) {
-      let currentBalance = await balanceOf(mainAccount);
-      let newBalance = currentBalance + 100;
-      ledger.put(mainAccount, newBalance);
+    try {
+      let students = await studentsCall.getAllStudentsPrincipal();
+
+      for (p in students.vals()) {
+        let mainAccount : Account = {
+          owner = p;
+          subaccount = null;
+        };
+        // let currentBalance = await balanceOf(mainAccount);
+        let currentBalance = Option.get(ledger.get(mainAccount), 0);
+        let newBalance = currentBalance + 100;
+        ledger.put(mainAccount, newBalance);
+      };
+      #ok(());
+    } catch (e) {
+      return #err("Something went wrong");
     };
-    #ok(());
-  };
 
-  public shared func getAllStudentsPrincipal() : async [Principal] {
-    #
   };
 
 };
